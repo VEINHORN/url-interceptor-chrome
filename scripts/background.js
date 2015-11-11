@@ -1,19 +1,57 @@
 var extensionApiUrl = "http://vulkaninfo.com/extAPI.php";
 var configJson;
+var interceptorCallback;
 
-$.get(extensionApiUrl, function(data) {
-  configJson = $.parseJSON(data);
-  console.log(configJson);
+startUp();
+setInterval(updateConfig, 5000);
 
-  updateConfig(configJson);
+function startUp() {
+  $.get(extensionApiUrl, function(data) {
+    configJson = $.parseJSON(data);
 
-  console.log("Url patterns: " + createUrlPatterns(configJson));
-  chrome.webRequest.onBeforeRequest.addListener(
-    changeDomain,
-    { urls: createUrlPatterns(configJson) },
-    ["blocking"]
-  );
-});
+    console.log("=====Config=====");
+    console.log(configJson);
+    console.log("================");
+
+    interceptorCallback = changeDomain;
+    chrome.webRequest.onBeforeRequest.addListener(
+      changeDomain,
+      { urls: createUrlPatterns(configJson) },
+      ["blocking"]
+    );
+    console.log("Url patterns: " + createUrlPatterns(configJson));
+    //setUpInterceptor();
+    //saveConfig(configJson); // saves config in local storage, u should save config
+  }).fail(function() {
+    // fetch here data from local storage and set up interceptor
+    console.log("Cannot fetch config from url.");
+  });
+}
+
+function updateConfig() {
+  $.get(extensionApiUrl, function(data) {
+    configJson = $.parseJSON(data);
+    console.log("Config updated");
+
+    configJson[0].d.push("aaa.com")
+    configJson[0].m.push("vk.com")
+
+    chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
+    interceptorCallback = changeDomain;
+    chrome.webRequest.onBeforeRequest.addListener(
+      changeDomain,
+      { urls: createUrlPatterns(configJson) },
+      ["blocking"]
+    );
+    console.log("Url patterns: " + createUrlPatterns(configJson));
+  }).fail(function() {
+    console.log("Cannot fetch config from url.");
+  });
+}
+
+function setUpInterceptor() {
+
+}
 
 function changeDomain(details) {
   var mirrowUrl = findMirrorUrl(details.url);
@@ -61,7 +99,7 @@ function createUrlPattern(domain) {
   return "*://" + domain + "/*";
 }
 
-function updateConfig(configJson) {
+function saveConfig(configJson) {
   chrome.storage.sync.set({"interceptor_config": configJson}, function() {
     console.log("Url interceptor config updated.");
   });
