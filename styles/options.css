@@ -13,3 +13,7 @@ body {
 #options-container #status {
   color: red;
 }
+
+#status_container {
+  margin-top: 10px;
+}

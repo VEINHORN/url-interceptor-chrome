@@ -9,10 +9,12 @@
     <div class="container" id="options-container">
       <div class="row">
         <div class="col-md-8 col-md-offset-2">
-          <p>Интервал проверки зеркал (миллисекунды):</p>
-          <input type="text" class="form-control" id="domain-checking-interval">
-          <p></p>
-          <button class="btn btn-success" id="save_btn">Сохранить</button>
+          <p>Интервал проверки зеркал (часы):</p>
+          <input type="number" min="0" step="1" class="form-control" id="checking-interval">
+          <div id="status_container">
+            <p id="status"></p>
+          </div>
+          <button class="btn btn-success" id="save-btn">Сохранить</button>
         </div>
       </div>
     </div>
