@@ -1,0 +1,15 @@
+body {
+  background-color: #212121;
+}
+
+#options-container {
+  margin-top: 150px;
+}
+
+#options-container p {
+  color: #B2DFDB;
+}
+
+#options-container #status {
+  color: red;
+}
