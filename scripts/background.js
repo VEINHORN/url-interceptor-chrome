@@ -1,9 +1,10 @@
 var extensionApiUrl = "http://vulkaninfo.com/extAPI.php";
 var configJson;
 var interceptorCallback;
+var intervalId;
 
 startUp();
-setInterval(updateConfig, 5000);
+intervalId = setInterval(updateConfig, 5000);
 
 function startUp() {
   $.get(extensionApiUrl, function(data) {
