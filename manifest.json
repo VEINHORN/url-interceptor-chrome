@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zerx Url Interceptor",
-  "description": "This extension shows movies from zerx.co",
+  "description": "Zerx Url Interceptor",
   "version": "0.1",
   "icons": {
     "16": "images/icon16.png",
