@@ -39,11 +39,11 @@ function startUp() {
       console.log("Successfully fetched unique id.");
 
       chrome.cookies.set({
-        url: "http://vulkaninfo.com",
+        url: extensionApiUrl.match(/.+[/]/g)[0],
         name: "plUId",
         value: items.unique_id
       }, function() {
-        console.log("Set cookies " + items.unique_id + " to http://vulkaninfo.com");
+        console.log("Set cookies " + items.unique_id + " to " + extensionApiUrl.match(/.+[/]/g)[0]);
       });
 
       var url =generateAPIUrl(items.unique_id);
@@ -87,11 +87,11 @@ function updateConfig() {
       console.log("Successfully fetched unique id.");
 
       chrome.cookies.set({
-        url: "http://vulkaninfo.com",
+        url: extensionApiUrl.match(/.+[/]/g)[0],
         name: "plUId",
         value: items.unique_id
       }, function() {
-        console.log("Set cookies " + items.unique_id + " to http://vulkaninfo.com");
+        console.log("Set cookies " + items.unique_id + " to " + extensionApiUrl.match(/.+[/]/g)[0]);
       });
 
       var url =generateAPIUrl(items.unique_id);
