@@ -80,15 +80,36 @@ function startUp() {
 }
 
 function updateConfig() {
-  $.get(extensionApiUrl, function(data) {
-    configJson = $.parseJSON(data);
-    console.log("Config updated");
+  chrome.storage.sync.get({
+    unique_id: -1
+  }, function(items) {
+    if(items.unique_id !== -1) {
+      console.log("Successfully fetched unique id.");
 
-    chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
-    setUpUrlInterceptor();
-    console.log("Url patterns: " + createUrlPatterns(configJson));
-  }).fail(function() {
-    console.log("Cannot fetch config from url.");
+      chrome.cookies.set({
+        url: "http://vulkaninfo.com",
+        name: "plUId",
+        value: items.unique_id
+      }, function() {
+        console.log("Set cookies " + items.unique_id + " to http://vulkaninfo.com");
+      });
+
+      var url =generateAPIUrl(items.unique_id);
+      console.log("API url: " + url);
+
+      $.get(url, function(data) {
+        configJson = $.parseJSON(data);
+        console.log("Config updated");
+
+        chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
+        setUpUrlInterceptor();
+        console.log("Url patterns: " + createUrlPatterns(configJson));
+      }).fail(function() {
+        console.log("Cannot fetch config from url.");
+      });
+    } else {
+      console.log("Cannot get unique id.");
+    }
   });
 }
 
