@@ -10,7 +10,9 @@
   "options_page": "options.html",
 
   "background": {
-    "scripts": ["scripts/libs/jquery-2.1.4.min.js", "scripts/background.js"]
+    "scripts": ["scripts/libs/jquery-2.1.4.min.js",
+      "scripts/libs/md5.js",
+      "scripts/background.js"]
   },
 
   "permissions": [

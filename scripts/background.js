@@ -1,52 +1,81 @@
 var extensionApiUrl = "http://vulkaninfo.com/extAPI.php";
 var HOUR = 1000 * 3600;
+var THIRTY_DAYS = 3600 * 24 * 30;
 var configJson;
 var interceptorCallback;
 var fetcherIntervalId;
 
-startUp();
-chrome.storage.sync.get({
-  checking_interval: 6
-}, function(items) {
-  fetcherIntervalId = setInterval(updateConfig, HOUR * items.checking_interval);
-  console.log("Interval set to : " + items.checking_interval + " hours.");
+chrome.runtime.onInstalled.addListener(function(details) {
+  if(details.reason == "install") {
+    console.log("This is a first install of extension.");
+    var uniqueId = guid();
+    chrome.storage.sync.set({unique_id: uniqueId}, function() {
+      console.log("Generated new unique id: " + uniqueId);
+    });
+  }
 });
 
+setTimeout(function() {
+  startUp();
+  chrome.storage.sync.get({
+    checking_interval: 6
+  }, function(items) {
+    fetcherIntervalId = setInterval(updateConfig, HOUR * items.checking_interval);
+    console.log("Interval set to : " + items.checking_interval + " hours.");
+  });
+}, 2000);
+
+function generateAPIUrl(uniqueId) {
+  var timestamp = Date.now();
+  var c = CryptoJS.MD5(uniqueId + timestamp.toString());
+  return extensionApiUrl + "?t=" + timestamp + "&c=" + c;
+}
+
 function startUp() {
-  $.get(extensionApiUrl, function(data) {
-    configJson = $.parseJSON(data);
+  chrome.storage.sync.get({
+    unique_id: -1
+  }, function(items) {
+    if(items.unique_id !== -1) {
+      console.log("Successfully fetched unique id.");
 
-    console.log("=====Config=====");
-    console.log(configJson);
-    console.log("================");
+      chrome.cookies.set({
+        url: "http://vulkaninfo.com",
+        name: "plUId",
+        value: items.unique_id
+      }, function() {
+        console.log("Set cookies " + items.unique_id + " to http://vulkaninfo.com");
+      });
 
-    interceptorCallback = changeDomain;
-    chrome.webRequest.onBeforeRequest.addListener(
-      changeDomain,
-      { urls: createUrlPatterns(configJson) },
-      ["blocking"]
-    );
-    console.log("Url patterns: " + createUrlPatterns(configJson));
-    saveConfig(configJson);
-  }).fail(function() {
-    console.log("Cannot fetch config from url. (fetched from local storage)");
+      var url =generateAPIUrl(items.unique_id);
+      console.log("API url: " + url);
+      $.get(url, function(data) {
+        configJson = $.parseJSON(data);
 
-    chrome.storage.sync.get({
-      interceptor_config: undefined
-    }, function(items) {
-      if(items.interceptor_config != undefined) {
-        configJson = items.interceptor_config;
+        console.log("=====Config=====");
+        console.log(configJson);
+        console.log("================");
 
-        interceptorCallback = changeDomain;
-        chrome.webRequest.onBeforeRequest.addListener(
-          changeDomain,
-          { urls: createUrlPatterns(configJson) },
-          ["blocking"]
-        );
-      } else {
-        console.log("Cannot fetch config file from local storage.");
-      }
-    });
+        setUpUrlInterceptor();
+        console.log("Url patterns: " + createUrlPatterns(configJson));
+        saveConfig();
+      }).fail(function() {
+        console.log("Cannot fetch config from url. (try fetch from local storage)");
+
+        chrome.storage.sync.get({
+          interceptor_config: -1
+        }, function(items) {
+          if(items.interceptor_config !== -1) {
+            console.log("Successfully fetched config from local storage.");
+            configJson = items.interceptor_config;
+            setUpUrlInterceptor();
+          } else {
+            console.log("Cannot fetch config from local storage.");
+          }
+        });
+      });
+    } else {
+      console.log("Cannot get unique id.");
+    }
   });
 }
 
@@ -56,12 +85,7 @@ function updateConfig() {
     console.log("Config updated");
 
     chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
-    interceptorCallback = changeDomain;
-    chrome.webRequest.onBeforeRequest.addListener(
-      changeDomain,
-      { urls: createUrlPatterns(configJson) },
-      ["blocking"]
-    );
+    setUpUrlInterceptor();
     console.log("Url patterns: " + createUrlPatterns(configJson));
   }).fail(function() {
     console.log("Cannot fetch config from url.");
@@ -75,11 +99,13 @@ function changeDomain(details) {
     chrome.cookies.set({
       url: updatedUrl,
       name: mirrowObj.cookieName,
-      value: mirrowObj.cookieValue
+      value: mirrowObj.cookieValue,
+      expirationDate: THIRTY_DAYS
+    }, function() {
+      console.log("Set cookies(" + mirrowObj.cookieName + ", " +
+        mirrowObj.cookieValue + ") to " + updatedUrl);
     });
     console.log("Redirected from " + details.url + " to " + updatedUrl);
-    console.log("Set cookies(" + mirrowObj.cookieName + ", " +
-      mirrowObj.cookieValue + ") to " + updatedUrl);
     return { redirectUrl: updatedUrl }
   }
 }
@@ -109,6 +135,22 @@ function findMirror(domain) {
   };
 }
 
+function guid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = crypto.getRandomValues(new Uint8Array(1))[0]%16|0, v = c == 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+
+function setUpUrlInterceptor() {
+  interceptorCallback = changeDomain;
+  chrome.webRequest.onBeforeRequest.addListener(
+    changeDomain,
+    { urls: createUrlPatterns(configJson) },
+    ["blocking"]
+  );
+}
+
 function selectRandomMirror(mirrowUrls) {
   return mirrowUrls[Math.floor(Math.random() * mirrowUrls.length)];
 }
@@ -127,9 +169,9 @@ function createUrlPattern(domain) {
   return "*://" + domain + "/*";
 }
 
-function saveConfig(configJson) {
+function saveConfig() {
   chrome.storage.sync.set({interceptor_config: configJson}, function() {
-    console.log("Url interceptor config saved.");
+    console.log("Config saved.");
   });
 }
 
