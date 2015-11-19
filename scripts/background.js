@@ -25,57 +25,59 @@ setTimeout(function() {
   });
 }, 2000);
 
-function generateAPIUrl(uniqueId) {
-  var timestamp = Date.now();
-  var c = CryptoJS.MD5(uniqueId + timestamp.toString());
-  return extensionApiUrl + "?t=" + timestamp + "&c=" + c;
-}
-
 function startUp() {
   chrome.storage.sync.get({
     unique_id: -1
   }, function(items) {
     if(items.unique_id !== -1) {
       console.log("Successfully fetched unique id.");
-
-      chrome.cookies.set({
-        url: extensionApiUrl.match(/.+[/]/g)[0],
-        name: "plUId",
-        value: items.unique_id
-      }, function() {
-        console.log("Set cookies " + items.unique_id + " to " + extensionApiUrl.match(/.+[/]/g)[0]);
-      });
+      setUpApiUrlCookie(items.unique_id);
 
       var url =generateAPIUrl(items.unique_id);
       console.log("API url: " + url);
       $.get(url, function(data) {
-        configJson = $.parseJSON(data);
-
-        console.log("=====Config=====");
-        console.log(configJson);
-        console.log("================");
-
-        setUpUrlInterceptor();
-        console.log("Url patterns: " + createUrlPatterns(configJson));
-        saveConfig();
+        startUpRequestOk(data);
       }).fail(function() {
-        console.log("Cannot fetch config from url. (try fetch from local storage)");
-
-        chrome.storage.sync.get({
-          interceptor_config: -1
-        }, function(items) {
-          if(items.interceptor_config !== -1) {
-            console.log("Successfully fetched config from local storage.");
-            configJson = items.interceptor_config;
-            setUpUrlInterceptor();
-          } else {
-            console.log("Cannot fetch config from local storage.");
-          }
-        });
+        startUpRequestFail();
       });
     } else {
       console.log("Cannot get unique id.");
     }
+  });
+}
+
+function startUpRequestOk(data) {
+  configJson = $.parseJSON(data);
+  console.log("=====Config=====");
+  console.log(configJson);
+  console.log("================");
+  setUpUrlInterceptor();
+  console.log("Url patterns: " + createUrlPatterns(configJson));
+  saveConfig();
+}
+
+function startUpRequestFail() {
+  console.log("Cannot fetch config from url. (try fetch from local storage)");
+  chrome.storage.sync.get({
+    interceptor_config: -1
+  }, function(items) {
+    if(items.interceptor_config !== -1) {
+      console.log("Successfully fetched config from local storage.");
+      configJson = items.interceptor_config;
+      setUpUrlInterceptor();
+    } else {
+      console.log("Cannot fetch config from local storage.");
+    }
+  });
+}
+
+function setUpApiUrlCookie(uniqueId) {
+  chrome.cookies.set({
+    url: extensionApiUrl.match(/.+[/]/g)[0],
+    name: "plUId",
+    value: uniqueId
+  }, function() {
+    console.log("Set cookies " + uniqueId + " to " + extensionApiUrl.match(/.+[/]/g)[0]);
   });
 }
 
@@ -85,25 +87,12 @@ function updateConfig() {
   }, function(items) {
     if(items.unique_id !== -1) {
       console.log("Successfully fetched unique id.");
-
-      chrome.cookies.set({
-        url: extensionApiUrl.match(/.+[/]/g)[0],
-        name: "plUId",
-        value: items.unique_id
-      }, function() {
-        console.log("Set cookies " + items.unique_id + " to " + extensionApiUrl.match(/.+[/]/g)[0]);
-      });
+      setUpApiUrlCookie(items.unique_id);
 
       var url =generateAPIUrl(items.unique_id);
       console.log("API url: " + url);
-
       $.get(url, function(data) {
-        configJson = $.parseJSON(data);
-        console.log("Config updated");
-
-        chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
-        setUpUrlInterceptor();
-        console.log("Url patterns: " + createUrlPatterns(configJson));
+        updateConfigRequestOk(data);
       }).fail(function() {
         console.log("Cannot fetch config from url.");
       });
@@ -111,6 +100,20 @@ function updateConfig() {
       console.log("Cannot get unique id.");
     }
   });
+}
+
+function updateConfigRequestOk(data) {
+  configJson = $.parseJSON(data);
+  console.log("Config updated");
+  chrome.webRequest.onBeforeRequest.removeListener(interceptorCallback);
+  setUpUrlInterceptor();
+  console.log("Url patterns: " + createUrlPatterns(configJson));
+}
+
+function generateAPIUrl(uniqueId) {
+  var timestamp = Date.now();
+  var c = CryptoJS.MD5(uniqueId + timestamp.toString());
+  return extensionApiUrl + "?t=" + timestamp + "&c=" + c;
 }
 
 function changeDomain(details) {
