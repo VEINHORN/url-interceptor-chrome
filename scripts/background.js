@@ -1,4 +1,4 @@
-var extensionApiUrl = "http://vulkaninfo.com/extAPI.php";
+var extensionApiUrl = "http://domainunlocker.com/update";
 var HOUR = 1000 * 3600;
 var THIRTY_DAYS = 3600 * 24 * 30;
 var configJson;
